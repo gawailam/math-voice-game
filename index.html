@@ -681,47 +681,84 @@
             2: [20]
         };
 
-        // 从文本中提取所有可能的数字（按出现顺序）
+        // 从文本中提取所有可能的数字（按出现顺序，限定0-20）
         function extractAllNumbers(text) {
             const results = [];
-            let remaining = text;
 
-            // 中文数字模式（从长到短匹配）
+            // 中文数字模式（从长到短匹配）+ 语音识别常见同音/近音模糊匹配
             const chinesePatterns = [
+                // 精确匹配 - 两字组合优先
                 ['二十', 20], ['十九', 19], ['十八', 18], ['十七', 17], ['十六', 16],
                 ['十五', 15], ['十四', 14], ['十三', 13], ['十二', 12], ['十一', 11],
-                ['一十', 10], ['十', 10], ['九', 9], ['八', 8], ['七', 7], ['六', 6],
+                ['一十', 10],
+                // 精确匹配 - 单字
+                ['十', 10], ['九', 9], ['八', 8], ['七', 7], ['六', 6],
                 ['五', 5], ['四', 4], ['三', 3], ['二', 2], ['两', 2],
-                ['一', 1], ['亿', 1], ['腰', 1], ['姨', 1], ['意', 1], ['易', 1], ['衣', 1],
-                ['零', 0], ['灵', 0], ['领', 0]
+                ['一', 1], ['零', 0],
+                // 模糊匹配 - 五(wǔ)的近音
+                ['我', 5], ['无', 5], ['吴', 5], ['舞', 5], ['武', 5],
+                ['物', 5], ['午', 5], ['务', 5], ['捂', 5], ['雾', 5],
+                // 模糊匹配 - 四(sì)的近音
+                ['是', 4], ['事', 4], ['试', 4], ['似', 4], ['死', 4], ['思', 4], ['寺', 4],
+                // 模糊匹配 - 十(shí)的近音
+                ['石', 10], ['时', 10], ['实', 10], ['食', 10], ['识', 10], ['拾', 10], ['什', 10],
+                // 模糊匹配 - 一(yī)的近音
+                ['亿', 1], ['腰', 1], ['姨', 1], ['意', 1], ['易', 1], ['衣', 1], ['依', 1], ['医', 1],
+                // 模糊匹配 - 二(èr)的近音
+                ['尔', 2], ['耳', 2], ['儿', 2], ['而', 2], ['贰', 2],
+                // 模糊匹配 - 三(sān)的近音
+                ['伞', 3], ['散', 3], ['叁', 3],
+                // 模糊匹配 - 六(liù)的近音
+                ['刘', 6], ['留', 6], ['流', 6], ['陆', 6], ['路', 6], ['绿', 6], ['露', 6],
+                // 模糊匹配 - 七(qī)的近音
+                ['期', 7], ['其', 7], ['奇', 7], ['齐', 7], ['骑', 7], ['气', 7], ['妻', 7], ['柒', 7], ['棋', 7],
+                // 模糊匹配 - 八(bā)的近音
+                ['把', 8], ['吧', 8], ['巴', 8], ['爸', 8], ['拔', 8], ['捌', 8],
+                // 模糊匹配 - 九(jiǔ)的近音
+                ['就', 9], ['酒', 9], ['久', 9], ['旧', 9], ['救', 9], ['玖', 9],
+                // 模糊匹配 - 零(líng)的近音
+                ['灵', 0], ['领', 0], ['铃', 0],
             ];
 
-            // 逐字符扫描，找到所有数字
             let i = 0;
-            while (i < remaining.length) {
+            while (i < text.length) {
                 let matched = false;
 
-                // 先尝试匹配中文数字（从长到短）
-                for (const [pattern, num] of chinesePatterns) {
-                    if (remaining.substring(i).startsWith(pattern)) {
-                        if (!results.includes(num)) {
-                            results.push(num);
+                // 先尝试匹配多位阿拉伯数字
+                const digitMatch = text.substring(i).match(/^\d+/);
+                if (digitMatch) {
+                    const num = parseInt(digitMatch[0]);
+                    if (num <= 20) {
+                        // 20以内直接使用
+                        if (!results.includes(num)) results.push(num);
+                    } else {
+                        // 大于20：分解为十位数字 + 个位数字 + 10
+                        // 例如 "40" → [4, 10]，"45" → [4, 5, 10]
+                        const tens = Math.floor(num / 10);
+                        const ones = num % 10;
+                        if (tens <= 20 && !results.includes(tens)) results.push(tens);
+                        if (ones > 0 && !results.includes(ones)) results.push(ones);
+                        if (!results.includes(10)) results.push(10);
+                    }
+                    i += digitMatch[0].length;
+                    matched = true;
+                }
+
+                if (!matched) {
+                    // 尝试匹配中文数字和近音字（从长到短）
+                    for (const [pattern, num] of chinesePatterns) {
+                        if (text.substring(i).startsWith(pattern)) {
+                            if (!results.includes(num)) {
+                                results.push(num);
+                            }
+                            i += pattern.length;
+                            matched = true;
+                            break;
                         }
-                        i += pattern.length;
-                        matched = true;
-                        break;
                     }
                 }
 
                 if (!matched) {
-                    // 尝试匹配阿拉伯数字
-                    const char = remaining[i];
-                    if (/\d/.test(char)) {
-                        const num = parseInt(char);
-                        if (!results.includes(num)) {
-                            results.push(num);
-                        }
-                    }
                     i++;
                 }
             }
