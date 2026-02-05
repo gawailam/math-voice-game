@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>数学训练游戏</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            image-rendering: pixelated;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(180deg,
+                #1a1a2e 0%,
+                #16213e 30%,
+                #0f3460 60%,
+                #533483 100%);
+        }
+
+        /* 像素星星背景 */
+        .star {
+            position: absolute;
+            background: #fff;
+            animation: twinkle 2s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* 开始界面 */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #533483 100%);
+            z-index: 100;
+        }
+
+        #start-screen h1 {
+            font-size: 24px;
+            color: #00ff88;
+            margin-bottom: 10px;
+            text-shadow: 4px 4px 0 #005533;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        #start-screen .subtitle {
+            font-size: 10px;
+            color: #88ccff;
+            margin-bottom: 40px;
+            text-align: center;
+            line-height: 2;
+        }
+
+        #start-btn, #restart-btn {
+            padding: 20px 40px;
+            font-size: 14px;
+            font-family: 'Press Start 2P', cursive;
+            background: #00ff88;
+            color: #1a1a2e;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.1s;
+            box-shadow:
+                0 6px 0 #00aa55,
+                0 8px 10px rgba(0,0,0,0.4);
+        }
+
+        #start-btn:hover, #restart-btn:hover {
+            transform: translateY(2px);
+            box-shadow:
+                0 4px 0 #00aa55,
+                0 6px 8px rgba(0,0,0,0.4);
+        }
+
+        #start-btn:active, #restart-btn:active {
+            transform: translateY(6px);
+            box-shadow:
+                0 0px 0 #00aa55,
+                0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        /* 游戏结束界面 */
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+        }
+
+        #game-over-screen h1 {
+            font-size: 20px;
+            color: #ff4757;
+            margin-bottom: 20px;
+            text-shadow: 4px 4px 0 #aa0000;
+        }
+
+        #game-over-screen .final-score {
+            font-size: 16px;
+            color: #ffd700;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 0 #aa8800;
+        }
+
+        #restart-btn {
+            background: #ff4757;
+            box-shadow: 0 6px 0 #aa2233;
+        }
+
+        #restart-btn:hover {
+            box-shadow: 0 4px 0 #aa2233;
+        }
+
+        /* 分数显示 */
+        #score-display {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            color: #ffd700;
+            z-index: 10;
+            text-shadow: 2px 2px 0 #aa8800;
+        }
+
+        /* 游戏区域 */
+        #game-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 160px);
+        }
+
+        /* 玻璃瓶算式 */
+        .bubble {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 5;
+        }
+
+        .bottle {
+            position: relative;
+            width: 80px;
+            height: 100px;
+        }
+
+        /* 瓶身 - 像素风格玻璃瓶 */
+        .bottle-body {
+            position: absolute;
+            bottom: 0;
+            left: 10px;
+            width: 60px;
+            height: 70px;
+            background: linear-gradient(90deg,
+                rgba(100, 200, 255, 0.3) 0%,
+                rgba(150, 220, 255, 0.5) 30%,
+                rgba(200, 240, 255, 0.6) 50%,
+                rgba(150, 220, 255, 0.5) 70%,
+                rgba(100, 200, 255, 0.3) 100%);
+            border: 4px solid rgba(150, 220, 255, 0.8);
+            border-radius: 0 0 15px 15px;
+            box-shadow:
+                inset 0 0 20px rgba(255,255,255,0.3),
+                0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        /* 瓶颈 */
+        .bottle-neck {
+            position: absolute;
+            bottom: 70px;
+            left: 25px;
+            width: 30px;
+            height: 25px;
+            background: linear-gradient(90deg,
+                rgba(100, 200, 255, 0.3) 0%,
+                rgba(200, 240, 255, 0.5) 50%,
+                rgba(100, 200, 255, 0.3) 100%);
+            border: 4px solid rgba(150, 220, 255, 0.8);
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+        }
+
+        /* 瓶塞 */
+        .bottle-cork {
+            position: absolute;
+            bottom: 92px;
+            left: 22px;
+            width: 36px;
+            height: 15px;
+            background: linear-gradient(180deg, #d4a574 0%, #a67c52 100%);
+            border-radius: 3px 3px 0 0;
+            border: 3px solid #8b6342;
+        }
+
+        /* 瓶内液体 */
+        .bottle-liquid {
+            position: absolute;
+            bottom: 4px;
+            left: 14px;
+            width: 52px;
+            height: 40px;
+            background: linear-gradient(180deg,
+                rgba(0, 255, 136, 0.6) 0%,
+                rgba(0, 200, 100, 0.8) 100%);
+            border-radius: 0 0 12px 12px;
+            animation: liquidWave 2s ease-in-out infinite;
+        }
+
+        @keyframes liquidWave {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.95); }
+        }
+
+        /* 算式文字 */
+        .equation-text {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 80px;
+            text-align: center;
+            font-size: 12px;
+            color: #1a1a2e;
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+            z-index: 2;
+        }
+
+        /* 高光效果 */
+        .bottle-shine {
+            position: absolute;
+            bottom: 50px;
+            left: 16px;
+            width: 8px;
+            height: 20px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 4px;
+            transform: rotate(-15deg);
+        }
+
+        /* 底部喇叭区域 */
+        #speaker-area {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 20px;
+            background: linear-gradient(180deg,
+                transparent 0%,
+                rgba(26, 26, 46, 0.8) 30%,
+                #1a1a2e 100%);
+        }
+
+        /* 地面像素格子 */
+        #speaker-area::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background:
+                repeating-linear-gradient(90deg,
+                    #2d2d44 0px, #2d2d44 20px,
+                    #3d3d54 20px, #3d3d54 40px);
+            border-top: 4px solid #4a4a6a;
+        }
+
+        #speaker {
+            position: relative;
+            width: 100px;
+            height: 120px;
+            z-index: 5;
+        }
+
+        /* 喇叭主体 - 朝上 */
+        .megaphone {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 喇叭筒身 */
+        .mega-body {
+            position: absolute;
+            bottom: 20px;
+            left: 30px;
+            width: 40px;
+            height: 50px;
+            background: linear-gradient(90deg, #e74c3c 0%, #ff6b6b 50%, #e74c3c 100%);
+            border: 4px solid #c0392b;
+            border-radius: 5px;
+        }
+
+        /* 喇叭口 - 朝上 */
+        .mega-horn {
+            position: absolute;
+            bottom: 65px;
+            left: 15px;
+            width: 70px;
+            height: 50px;
+            background: linear-gradient(180deg,
+                #ff6b6b 0%,
+                #e74c3c 50%,
+                #c0392b 100%);
+            border: 4px solid #c0392b;
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            clip-path: polygon(15% 100%, 85% 100%, 100% 0%, 0% 0%);
+        }
+
+        /* 喇叭内部黑色 */
+        .mega-inner {
+            position: absolute;
+            bottom: 70px;
+            left: 25px;
+            width: 50px;
+            height: 35px;
+            background: #1a1a2e;
+            border-radius: 8px 8px 0 0;
+            clip-path: polygon(10% 100%, 90% 100%, 100% 0%, 0% 0%);
+        }
+
+        /* 喇叭把手 */
+        .mega-handle {
+            position: absolute;
+            bottom: 5px;
+            left: 35px;
+            width: 30px;
+            height: 25px;
+            background: linear-gradient(90deg, #f39c12 0%, #f1c40f 50%, #f39c12 100%);
+            border: 4px solid #d68910;
+            border-radius: 5px;
+        }
+
+        /* 声波动画容器 */
+        .sound-waves {
+            position: absolute;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            pointer-events: none;
+        }
+
+        /* 声波圈 */
+        .wave-ring {
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            border: 4px solid #00ff88;
+            border-radius: 50%;
+            opacity: 0;
+        }
+
+        .listening .wave-ring {
+            animation: waveUp 1.5s ease-out infinite;
+        }
+
+        .wave-ring:nth-child(1) { animation-delay: 0s; }
+        .wave-ring:nth-child(2) { animation-delay: 0.5s; }
+        .wave-ring:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes waveUp {
+            0% {
+                width: 20px;
+                height: 20px;
+                opacity: 1;
+                bottom: 0;
+            }
+            100% {
+                width: 80px;
+                height: 80px;
+                opacity: 0;
+                bottom: 40px;
+            }
+        }
+
+        /* 音量指示条 */
+        .volume-bars {
+            position: absolute;
+            bottom: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 4px;
+            height: 30px;
+            align-items: flex-end;
+        }
+
+        .volume-bar {
+            width: 6px;
+            background: #00ff88;
+            border: 2px solid #00aa55;
+            transition: height 0.1s;
+        }
+
+        .listening .volume-bar {
+            animation: volumePulse 0.3s ease-in-out infinite alternate;
+        }
+
+        .volume-bar:nth-child(1) { height: 10px; animation-delay: 0s; }
+        .volume-bar:nth-child(2) { height: 15px; animation-delay: 0.05s; }
+        .volume-bar:nth-child(3) { height: 20px; animation-delay: 0.1s; }
+        .volume-bar:nth-child(4) { height: 15px; animation-delay: 0.15s; }
+        .volume-bar:nth-child(5) { height: 10px; animation-delay: 0.2s; }
+
+        @keyframes volumePulse {
+            0% { transform: scaleY(0.5); }
+            100% { transform: scaleY(1.5); }
+        }
+
+        /* 语音状态指示 */
+        #voice-status {
+            position: absolute;
+            bottom: 165px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border: 3px solid #00aa55;
+            white-space: nowrap;
+        }
+
+        /* 发射的数字 */
+        .projectile {
+            position: absolute;
+            font-size: 20px;
+            font-family: 'Press Start 2P', cursive;
+            color: #00ff88;
+            text-shadow:
+                2px 2px 0 #00aa55,
+                0 0 10px #00ff88;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        /* 声浪效果 */
+        .sound-wave {
+            position: absolute;
+            border: 4px solid rgba(0, 255, 136, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: waveExpand 0.6s ease-out forwards;
+        }
+
+        @keyframes waveExpand {
+            0% {
+                width: 20px;
+                height: 20px;
+                opacity: 1;
+            }
+            100% {
+                width: 80px;
+                height: 80px;
+                opacity: 0;
+            }
+        }
+
+        /* 碎片粒子 - 像素风格 */
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            pointer-events: none;
+        }
+
+        /* 玻璃碎片 */
+        .glass-shard {
+            background: rgba(150, 220, 255, 0.8);
+            border: 2px solid rgba(200, 240, 255, 0.9);
+        }
+
+        /* 液体飞溅 */
+        .liquid-drop {
+            background: #00ff88;
+            border-radius: 50%;
+        }
+
+        /* 得分动画 */
+        .score-popup {
+            position: absolute;
+            font-size: 14px;
+            font-family: 'Press Start 2P', cursive;
+            color: #ffd700;
+            text-shadow: 2px 2px 0 #aa8800;
+            pointer-events: none;
+            animation: scoreFloat 1s ease-out forwards;
+        }
+
+        @keyframes scoreFloat {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-40px) scale(1.2);
+            }
+        }
+
+        /* 识别到的文字显示 */
+        #recognized-text {
+            position: absolute;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #00ff88;
+            text-shadow:
+                3px 3px 0 #00aa55,
+                0 0 20px rgba(0, 255, 136, 0.5);
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 15;
+            white-space: nowrap;
+        }
+
+        #recognized-text.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- 开始界面 -->
+        <div id="start-screen">
+            <h1>MATH<br>VOICE<br>GAME</h1>
+            <p class="subtitle">说出答案击碎玻璃瓶!</p>
+            <button id="start-btn">START</button>
+        </div>
+
+        <!-- 游戏结束界面 -->
+        <div id="game-over-screen">
+            <h1>GAME OVER</h1>
+            <div class="final-score">SCORE: <span id="final-score">0</span></div>
+            <button id="restart-btn">RETRY</button>
+        </div>
+
+        <!-- 分数显示 -->
+        <div id="score-display">SCORE: <span id="score">0</span></div>
+
+        <!-- 游戏区域 -->
+        <div id="game-area"></div>
+
+        <!-- 识别到的文字 -->
+        <div id="recognized-text"></div>
+
+        <!-- 语音状态 -->
+        <div id="voice-status">WAITING...</div>
+
+        <!-- 喇叭区域 -->
+        <div id="speaker-area">
+            <div id="speaker">
+                <!-- 声波动画 -->
+                <div class="sound-waves">
+                    <div class="wave-ring"></div>
+                    <div class="wave-ring"></div>
+                    <div class="wave-ring"></div>
+                </div>
+                <!-- 音量条 -->
+                <div class="volume-bars">
+                    <div class="volume-bar"></div>
+                    <div class="volume-bar"></div>
+                    <div class="volume-bar"></div>
+                    <div class="volume-bar"></div>
+                    <div class="volume-bar"></div>
+                </div>
+                <!-- 喇叭 -->
+                <div class="megaphone">
+                    <div class="mega-inner"></div>
+                    <div class="mega-horn"></div>
+                    <div class="mega-body"></div>
+                    <div class="mega-handle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 创建星星背景
+        function createStars() {
+            const container = document.getElementById('game-container');
+            for (let i = 0; i < 50; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 60 + '%';
+                star.style.width = (Math.random() * 3 + 2) + 'px';
+                star.style.height = star.style.width;
+                star.style.animationDelay = Math.random() * 2 + 's';
+                container.appendChild(star);
+            }
+        }
+        createStars();
+
+        // 游戏状态
+        const gameState = {
+            score: 0,
+            isRunning: false,
+            bubbles: [],
+            activeResults: new Set(),
+            recognition: null,
+            bubbleInterval: null,
+            animationFrame: null,
+            pendingNumber: null,
+            pendingTimeout: null,
+            lastProcessedIndex: -1,  // 跟踪已处理的结果索引
+            lastMatchedText: ''      // 防止重复匹配同一文本
+        };
+
+        // DOM 元素
+        const elements = {
+            startScreen: document.getElementById('start-screen'),
+            gameOverScreen: document.getElementById('game-over-screen'),
+            startBtn: document.getElementById('start-btn'),
+            restartBtn: document.getElementById('restart-btn'),
+            scoreDisplay: document.getElementById('score'),
+            finalScore: document.getElementById('final-score'),
+            gameArea: document.getElementById('game-area'),
+            voiceStatus: document.getElementById('voice-status'),
+            speaker: document.getElementById('speaker'),
+            recognizedText: document.getElementById('recognized-text')
+        };
+
+        // 中文数字映射
+        const chineseNumbers = {
+            '零': 0, '一': 1, '二': 2, '三': 3, '四': 4,
+            '五': 5, '六': 6, '七': 7, '八': 8, '九': 9,
+            '十': 10, '十一': 11, '十二': 12, '十三': 13, '十四': 14,
+            '十五': 15, '十六': 16, '十七': 17, '十八': 18, '十九': 19,
+            '二十': 20, '两': 2
+        };
+
+        // 可扩展的数字映射
+        const extendableNumbers = {
+            10: [11, 12, 13, 14, 15, 16, 17, 18, 19],
+            2: [20]
+        };
+
+        // 从文本中提取所有可能的数字（按出现顺序）
+        function extractAllNumbers(text) {
+            const results = [];
+            let remaining = text;
+
+            // 中文数字模式（从长到短匹配）
+            const chinesePatterns = [
+                ['二十', 20], ['十九', 19], ['十八', 18], ['十七', 17], ['十六', 16],
+                ['十五', 15], ['十四', 14], ['十三', 13], ['十二', 12], ['十一', 11],
+                ['一十', 10], ['十', 10], ['九', 9], ['八', 8], ['七', 7], ['六', 6],
+                ['五', 5], ['四', 4], ['三', 3], ['二', 2], ['两', 2],
+                ['一', 1], ['亿', 1], ['腰', 1], ['姨', 1], ['意', 1], ['易', 1], ['衣', 1],
+                ['零', 0], ['灵', 0], ['领', 0]
+            ];
+
+            // 逐字符扫描，找到所有数字
+            let i = 0;
+            while (i < remaining.length) {
+                let matched = false;
+
+                // 先尝试匹配中文数字（从长到短）
+                for (const [pattern, num] of chinesePatterns) {
+                    if (remaining.substring(i).startsWith(pattern)) {
+                        if (!results.includes(num)) {
+                            results.push(num);
+                        }
+                        i += pattern.length;
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (!matched) {
+                    // 尝试匹配阿拉伯数字
+                    const char = remaining[i];
+                    if (/\d/.test(char)) {
+                        const num = parseInt(char);
+                        if (!results.includes(num)) {
+                            results.push(num);
+                        }
+                    }
+                    i++;
+                }
+            }
+
+            return results;
+        }
+
+        // 保留原函数用于兼容
+        function extractBestNumber(text) {
+            const numbers = extractAllNumbers(text);
+            if (numbers.length > 0) {
+                return { number: numbers[0], pattern: '' };
+            }
+            return null;
+        }
+
+        function hasAnswerOnScreen(numbers) {
+            return numbers.some(n => gameState.bubbles.some(b => b.result === n && !b.hit));
+        }
+
+        function fireIfMatch(number) {
+            const targetBubble = gameState.bubbles.find(b => b.result === number && !b.hit);
+            if (targetBubble) {
+                targetBubble.hit = true;
+                fireProjectile(number, targetBubble);
+                return true;
+            }
+            return false;
+        }
+
+        function clearPending() {
+            if (gameState.pendingTimeout) {
+                clearTimeout(gameState.pendingTimeout);
+                gameState.pendingTimeout = null;
+            }
+            gameState.pendingNumber = null;
+        }
+
+        function generateEquation() {
+            const maxAttempts = 50;
+            for (let i = 0; i < maxAttempts; i++) {
+                const isAddition = Math.random() > 0.5;
+                let a, b, result;
+                if (isAddition) {
+                    result = Math.floor(Math.random() * 21);
+                    a = Math.floor(Math.random() * (result + 1));
+                    b = result - a;
+                } else {
+                    a = Math.floor(Math.random() * 21);
+                    b = Math.floor(Math.random() * (a + 1));
+                    result = a - b;
+                }
+                if (!gameState.activeResults.has(result)) {
+                    gameState.activeResults.add(result);
+                    return {
+                        text: isAddition ? `${a}+${b}` : `${a}-${b}`,
+                        result: result
+                    };
+                }
+            }
+            return null;
+        }
+
+        function getSpeedMultiplier() {
+            const score = gameState.score;
+            if (score <= 5) return 0.6;
+            if (score <= 10) return 1.0;
+            if (score <= 15) return 1.3;
+            if (score <= 20) return 1.6;
+            if (score <= 25) return 1.9;
+            return 2.0;
+        }
+
+        function isPositionOverlap(x, width) {
+            const padding = 20;
+            const topThreshold = 180;
+            for (const bubble of gameState.bubbles) {
+                if (bubble.y > topThreshold) continue;
+                const bLeft = bubble.x;
+                const bRight = bubble.x + (bubble.width || 80);
+                const newLeft = x;
+                const newRight = x + width;
+                if (!(newRight + padding < bLeft || newLeft - padding > bRight)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function findNonOverlapX() {
+            const bubbleWidth = 80;
+            const maxX = elements.gameArea.clientWidth - bubbleWidth - 10;
+            const minX = 10;
+            for (let attempt = 0; attempt < 30; attempt++) {
+                const x = Math.random() * (maxX - minX) + minX;
+                if (!isPositionOverlap(x, bubbleWidth)) {
+                    return x;
+                }
+            }
+            const slots = 5;
+            const slotWidth = (maxX - minX) / slots;
+            const shuffledSlots = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5);
+            for (const i of shuffledSlots) {
+                const x = minX + i * slotWidth + slotWidth / 4 + Math.random() * slotWidth / 2;
+                if (!isPositionOverlap(x, bubbleWidth)) {
+                    return x;
+                }
+            }
+            return null;
+        }
+
+        function createBubble() {
+            if (gameState.bubbles.length >= 5) return;
+            const equation = generateEquation();
+            if (!equation) return;
+            const x = findNonOverlapX();
+            if (x === null) return;
+
+            // 创建玻璃瓶元素
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = `
+                <div class="bottle">
+                    <div class="bottle-cork"></div>
+                    <div class="bottle-neck"></div>
+                    <div class="bottle-body"></div>
+                    <div class="bottle-liquid"></div>
+                    <div class="bottle-shine"></div>
+                    <div class="equation-text">${equation.text}</div>
+                </div>
+            `;
+            bubble.dataset.result = equation.result;
+            bubble.style.left = `${x}px`;
+            bubble.style.top = '-120px';
+
+            elements.gameArea.appendChild(bubble);
+
+            const baseSpeed = 1.4 + Math.random() * 0.7;
+            const speed = baseSpeed * getSpeedMultiplier();
+
+            const bubbleData = {
+                element: bubble,
+                result: equation.result,
+                x: x,
+                y: -120,
+                width: 80,
+                speed: speed
+            };
+
+            gameState.bubbles.push(bubbleData);
+        }
+
+        function updateBubbles() {
+            const gameAreaHeight = elements.gameArea.clientHeight;
+            for (let i = gameState.bubbles.length - 1; i >= 0; i--) {
+                const bubble = gameState.bubbles[i];
+                bubble.y += bubble.speed;
+                bubble.element.style.top = `${bubble.y}px`;
+                if (bubble.y > gameAreaHeight - 50) {
+                    removeBubble(i);
+                    endGame();
+                    return;
+                }
+            }
+        }
+
+        function removeBubble(index) {
+            const bubble = gameState.bubbles[index];
+            gameState.activeResults.delete(bubble.result);
+            bubble.element.remove();
+            gameState.bubbles.splice(index, 1);
+        }
+
+        function fireProjectile(answer, targetBubble) {
+            const speakerRect = elements.speaker.getBoundingClientRect();
+            const containerRect = document.getElementById('game-container').getBoundingClientRect();
+
+            const startX = speakerRect.left + speakerRect.width / 2 - containerRect.left;
+            const startY = speakerRect.top - containerRect.top;
+
+            const projectile = document.createElement('div');
+            projectile.className = 'projectile';
+            projectile.textContent = answer;
+            projectile.style.left = `${startX}px`;
+            projectile.style.top = `${startY}px`;
+            document.getElementById('game-container').appendChild(projectile);
+
+            createSoundWave(startX, startY);
+            setTimeout(() => createSoundWave(startX, startY), 50);
+
+            const bubbleRect = targetBubble.element.getBoundingClientRect();
+            const targetX = bubbleRect.left + bubbleRect.width / 2 - containerRect.left;
+            const targetY = bubbleRect.top + bubbleRect.height / 2 - containerRect.top;
+
+            const duration = 150;
+            const startTime = performance.now();
+
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                const currentX = startX + (targetX - startX) * easeOut;
+                const currentY = startY + (targetY - startY) * easeOut;
+                projectile.style.left = `${currentX}px`;
+                projectile.style.top = `${currentY}px`;
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    projectile.remove();
+                    hitBubble(targetBubble);
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function createSoundWave(x, y) {
+            const wave = document.createElement('div');
+            wave.className = 'sound-wave';
+            wave.style.left = `${x - 10}px`;
+            wave.style.top = `${y - 10}px`;
+            document.getElementById('game-container').appendChild(wave);
+            setTimeout(() => wave.remove(), 600);
+        }
+
+        function hitBubble(bubbleData) {
+            const bubble = bubbleData.element;
+            const rect = bubble.getBoundingClientRect();
+            const containerRect = document.getElementById('game-container').getBoundingClientRect();
+            const x = rect.left + rect.width / 2 - containerRect.left;
+            const y = rect.top + rect.height / 2 - containerRect.top;
+
+            createParticles(x, y);
+            showScorePopup(x, y);
+
+            gameState.score++;
+            elements.scoreDisplay.textContent = gameState.score;
+
+            const index = gameState.bubbles.indexOf(bubbleData);
+            if (index > -1) {
+                removeBubble(index);
+            }
+        }
+
+        function createParticles(x, y) {
+            const particleCount = 16;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle ' + (i < 10 ? 'glass-shard' : 'liquid-drop');
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+
+                const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.5;
+                const velocity = 80 + Math.random() * 120;
+                const vx = Math.cos(angle) * velocity;
+                const vy = Math.sin(angle) * velocity;
+
+                document.getElementById('game-container').appendChild(particle);
+
+                const startTime = performance.now();
+                const duration = 600;
+
+                function animateParticle(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = elapsed / duration;
+                    if (progress < 1) {
+                        const currentX = x + vx * progress;
+                        const currentY = y + vy * progress + 150 * progress * progress;
+                        particle.style.left = `${currentX}px`;
+                        particle.style.top = `${currentY}px`;
+                        particle.style.opacity = 1 - progress;
+                        requestAnimationFrame(animateParticle);
+                    } else {
+                        particle.remove();
+                    }
+                }
+                requestAnimationFrame(animateParticle);
+            }
+        }
+
+        function showScorePopup(x, y) {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup';
+            popup.textContent = '+1';
+            popup.style.left = `${x}px`;
+            popup.style.top = `${y}px`;
+            document.getElementById('game-container').appendChild(popup);
+            setTimeout(() => popup.remove(), 1000);
+        }
+
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert('浏览器不支持语音识别，请使用 Safari');
+                return false;
+            }
+
+            gameState.recognition = new SpeechRecognition();
+            gameState.recognition.continuous = true;
+            gameState.recognition.interimResults = true;
+            gameState.recognition.lang = 'zh-CN';
+
+            gameState.recognition.onresult = (event) => {
+                // 只处理新的结果，避免重复
+                const resultIndex = event.results.length - 1;
+                if (resultIndex <= gameState.lastProcessedIndex) return;
+
+                const result = event.results[resultIndex];
+                const transcript = result[0].transcript.trim();
+
+                // 跳过空结果或与上次完全相同的结果
+                if (!transcript || transcript === gameState.lastMatchedText) return;
+
+                elements.recognizedText.textContent = transcript;
+                elements.recognizedText.classList.add('show');
+                setTimeout(() => {
+                    elements.recognizedText.classList.remove('show');
+                }, 500);
+
+                const matched = processVoiceInput(transcript);
+                if (matched) {
+                    gameState.lastMatchedText = transcript;
+                    gameState.lastProcessedIndex = resultIndex;
+                    // 使用 abort 彻底重置识别
+                    try { gameState.recognition.abort(); } catch(e) {}
+                }
+            };
+
+            gameState.recognition.onerror = (event) => {
+                if (event.error !== 'no-speech' && gameState.isRunning) {
+                    setTimeout(() => {
+                        try { gameState.recognition.start(); } catch (e) {}
+                    }, 100);
+                }
+            };
+
+            gameState.recognition.onend = () => {
+                if (gameState.isRunning) {
+                    // 重置索引，因为新的识别会话从0开始
+                    gameState.lastProcessedIndex = -1;
+                    gameState.lastMatchedText = '';
+                    try { gameState.recognition.start(); } catch (e) {}
+                }
+            };
+
+            return true;
+        }
+
+        function processVoiceInput(text) {
+            // 提取文本中所有数字
+            const numbers = extractAllNumbers(text);
+            if (numbers.length === 0) return false;
+
+            let anyMatched = false;
+
+            // 遍历所有提取到的数字
+            for (const number of numbers) {
+                const canExtendTo = extendableNumbers[number];
+
+                if (canExtendTo) {
+                    const hasExtendedAnswer = hasAnswerOnScreen(canExtendTo);
+                    const hasCurrentAnswer = hasAnswerOnScreen([number]);
+
+                    if (hasExtendedAnswer && hasCurrentAnswer) {
+                        // 屏幕上同时有当前答案和可扩展答案，等待一下
+                        if (gameState.pendingNumber !== number) {
+                            clearPending();
+                            gameState.pendingNumber = number;
+                            gameState.pendingTimeout = setTimeout(() => {
+                                if (gameState.pendingNumber === number) {
+                                    if (fireIfMatch(number)) {
+                                        if (gameState.isRunning && gameState.recognition) {
+                                            try { gameState.recognition.abort(); } catch(e) {}
+                                        }
+                                    }
+                                    clearPending();
+                                }
+                            }, 350);
+                        }
+                        continue; // 继续检查其他数字
+                    } else if (hasExtendedAnswer && !hasCurrentAnswer) {
+                        continue; // 继续等待扩展
+                    }
+                }
+
+                // 尝试匹配当前数字
+                if (fireIfMatch(number)) {
+                    anyMatched = true;
+                    // 不要 break，继续处理其他数字
+                }
+            }
+
+            return anyMatched;
+        }
+
+        function gameLoop() {
+            if (!gameState.isRunning) return;
+            updateBubbles();
+            gameState.animationFrame = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            if (!initSpeechRecognition()) return;
+
+            gameState.score = 0;
+            gameState.isRunning = true;
+            gameState.bubbles = [];
+            gameState.activeResults.clear();
+            gameState.lastProcessedIndex = -1;
+            gameState.lastMatchedText = '';
+
+            elements.scoreDisplay.textContent = '0';
+            elements.startScreen.style.display = 'none';
+            elements.gameOverScreen.style.display = 'none';
+            elements.voiceStatus.textContent = 'LISTENING...';
+            elements.speaker.classList.add('listening');
+
+            elements.gameArea.innerHTML = '';
+
+            try { gameState.recognition.start(); } catch (e) {}
+
+            createBubble();
+            createBubble();
+            createBubble();
+
+            gameState.bubbleInterval = setInterval(() => {
+                if (gameState.bubbles.length < 5) {
+                    createBubble();
+                }
+            }, 3000);
+
+            gameLoop();
+        }
+
+        function endGame() {
+            gameState.isRunning = false;
+            clearPending();
+
+            if (gameState.recognition) {
+                gameState.recognition.stop();
+            }
+            if (gameState.bubbleInterval) {
+                clearInterval(gameState.bubbleInterval);
+            }
+            if (gameState.animationFrame) {
+                cancelAnimationFrame(gameState.animationFrame);
+            }
+
+            elements.speaker.classList.remove('listening');
+            elements.finalScore.textContent = gameState.score;
+            elements.gameOverScreen.style.display = 'flex';
+            elements.voiceStatus.textContent = 'GAME OVER';
+        }
+
+        elements.startBtn.addEventListener('click', startGame);
+        elements.restartBtn.addEventListener('click', startGame);
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.isRunning) return;
+            const key = parseInt(e.key);
+            if (!isNaN(key) && key >= 0 && key <= 9) {
+                const targetBubble = gameState.bubbles.find(b => b.result === key);
+                if (targetBubble) {
+                    fireProjectile(key, targetBubble);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
